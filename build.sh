@@ -19,7 +19,7 @@ else
 fi
 
 if test -f .git -a -d $GOPATH/.git; then
-    GIT_VOLUME_OPTIONS=-v $GOPATH/.git:/root/go/.git
+    GIT_VOLUME_OPTIONS="-v $GOPATH/.git:/root/go/.git"
 else
     GIT_VOLUME_OPTIONS=""
 fi
