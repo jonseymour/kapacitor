@@ -1,0 +1,26 @@
+FROM ubuntu:14.04.2
+
+MAINTAINER Jon Seymour "<jon@ninjablocks.com>"
+
+WORKDIR /app
+
+# copy binary into image
+COPY build/kapacitord /app/
+COPY build/kapacitor /app/
+
+# Add influxd to the PATH
+ENV PATH=/app:$PATH
+
+# Override the datapaths
+ENV KAPACITOR_HOSTNAME=kapacitor
+ENV KAPACITOR_DATA_DIR="/data"
+ENV KAPACITOR_REPLAY_DIR="/data/replay"
+ENV KAPACITOR_TASK_DIR="/data/tasks"
+ENV KAPACITOR_INFLUXDB_URLS_0=http://influx:8086
+
+# Generate a default config
+RUN kapacitord config > /etc/kapacitor.toml
+
+VOLUME ["/data"]
+EXPOSE 9092 9100 9101 9102 9103 9104
+ENTRYPOINT ["kapacitord", "--config", "/etc/kapacitor.toml"]
