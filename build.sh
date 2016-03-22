@@ -18,6 +18,12 @@ else
 	VOLUME_OPTIONS=
 fi
 
+if test -f .git -a -d $GOPATH/.git; then
+    GIT_VOLUME_OPTIONS=-v $GOPATH/.git:/root/go/.git
+else
+    GIT_VOLUME_OPTIONS=""
+fi
+
 echo "Running build.py"
 # Run docker
 docker run --rm \
@@ -25,5 +31,6 @@ docker run --rm \
     -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
     ${VOLUME_OPTIONS} \
     -v $DIR:/root/go/src/github.com/influxdata/kapacitor \
+    ${GIT_VOLUME_OPTIONS} \
     influxdata/kapacitor-builder \
     "$@"
