@@ -5,8 +5,8 @@ MAINTAINER Jon Seymour "<jon@ninjablocks.com>"
 WORKDIR /app
 
 # copy binary into image
-COPY build/kapacitord /app/
-COPY build/kapacitor /app/
+COPY build-products/kapacitord /app/
+COPY build-products/kapacitor /app/
 
 # Add influxd to the PATH
 ENV PATH=/app:$PATH
