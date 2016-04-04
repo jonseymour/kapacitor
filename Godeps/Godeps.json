@@ -22,6 +22,10 @@
 			"Rev": "stable-20160404a"
 		},
 		{
+			"ImportPath": "github.com/influxdb/influxdb",
+			"Rev": "v0.10.3"
+		},
+		{
 			"ImportPath": "github.com/pmezard/go-difflib/difflib",
 			"Rev": "792786c7400a136282c1664665ae0a8db921c6c2"
 		},
