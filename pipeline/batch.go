@@ -3,6 +3,8 @@ package pipeline
 import (
 	"bytes"
 	"time"
+
+	"github.com/influxdata/kapacitor/tick"
 )
 
 // A node that handles creating several child BatchNodes.
@@ -13,10 +15,10 @@ import (
 //
 // Example:
 //     var errors = batch
-//                      .query('SELECT value from errors')
+//                      |query('SELECT value from errors')
 //                      ...
 //     var views = batch
-//                      .query('SELECT value from views')
+//                      |query('SELECT value from views')
 //                      ...
 //
 type SourceBatchNode struct {
@@ -57,20 +59,23 @@ func (b *SourceBatchNode) dot(buf *bytes.Buffer) {
 //
 // Example:
 // batch
-//     .query('''
+//     |query('''
 //         SELECT mean("value")
 //         FROM "telegraf"."default".cpu_usage_idle
 //         WHERE "host" = 'serverA'
 //     ''')
-//     .period(1m)
-//     .every(20s)
-//     .groupBy(time(10s), 'cpu')
+//         .period(1m)
+//         .every(20s)
+//         .groupBy(time(10s), 'cpu')
 //     ...
 //
 // In the above example InfluxDB is queried every 20 seconds; the window of time returned
 // spans 1 minute and is grouped into 10 second buckets.
 type BatchNode struct {
 	chainnode
+
+	// self describer
+	describer *tick.ReflectionDescriber
 
 	// The query text
 	//tick:ignore
@@ -83,6 +88,11 @@ type BatchNode struct {
 	//
 	// The Every property is mutually exclusive with the Cron property.
 	Every time.Duration
+
+	// Align start and end times with the Every value
+	// Does not apply if Cron is used.
+	// tick:ignore
+	AlignFlag bool `tick:"Align"`
 
 	// Define a schedule using a cron syntax.
 	//
@@ -103,7 +113,7 @@ type BatchNode struct {
 
 	// The list of dimensions for the group-by clause.
 	//tick:ignore
-	Dimensions []interface{}
+	Dimensions []interface{} `tick:"GroupBy"`
 
 	// Fill the data.
 	// Options are:
@@ -120,9 +130,11 @@ type BatchNode struct {
 }
 
 func newBatchNode() *BatchNode {
-	return &BatchNode{
+	b := &BatchNode{
 		chainnode: newBasicChainNode("batch", BatchEdge, BatchEdge),
 	}
+	b.describer, _ = tick.NewReflectionDescriber(b)
+	return b
 }
 
 // Group the data by a set of dimensions.
@@ -134,10 +146,57 @@ func newBatchNode() *BatchNode {
 //
 // Example:
 //    batch
-//        .groupBy(time(10s), 'tag1', 'tag2'))
+//        |query(...)
+//            .groupBy(time(10s), 'tag1', 'tag2'))
 //
 // tick:property
 func (b *BatchNode) GroupBy(d ...interface{}) *BatchNode {
 	b.Dimensions = d
 	return b
+}
+
+// Align start and stop times for quiries with even boundaries of the BatchNode.Every property.
+// Does not apply if using the BatchNode.Cron property.
+// tick:property
+func (b *BatchNode) Align() *BatchNode {
+	b.AlignFlag = true
+	return b
+}
+
+// Tick Describer methods
+
+//tick:ignore
+func (b *BatchNode) Desc() string {
+	return b.describer.Desc()
+}
+
+//tick:ignore
+func (b *BatchNode) HasChainMethod(name string) bool {
+	if name == "groupBy" {
+		return true
+	}
+	return b.describer.HasChainMethod(name)
+}
+
+//tick:ignore
+func (b *BatchNode) CallChainMethod(name string, args ...interface{}) (interface{}, error) {
+	if name == "groupBy" {
+		return b.chainnode.GroupBy(args...), nil
+	}
+	return b.describer.CallChainMethod(name, args...)
+}
+
+//tick:ignore
+func (b *BatchNode) HasProperty(name string) bool {
+	return b.describer.HasProperty(name)
+}
+
+//tick:ignore
+func (b *BatchNode) Property(name string) interface{} {
+	return b.describer.Property(name)
+}
+
+//tick:ignore
+func (b *BatchNode) SetProperty(name string, args ...interface{}) (interface{}, error) {
+	return b.describer.SetProperty(name, args...)
 }

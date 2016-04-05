@@ -13,14 +13,12 @@ import (
 type EdgeType int
 
 const (
-	// No data is transfered
+	// No data is transferred
 	NoEdge EdgeType = iota
-	// Data is transfered immediately and one point at a time.
+	// Data is transferred immediately and one point at a time.
 	StreamEdge
-	// Data is transfered in batches as soon as it is ready.
+	// Data is transferred in batches as soon as it is ready.
 	BatchEdge
-	// Data is transfered as it is received from a map function.
-	ReduceEdge
 )
 
 type ID int
@@ -31,8 +29,6 @@ func (e EdgeType) String() string {
 		return "stream"
 	case BatchEdge:
 		return "batch"
-	case ReduceEdge:
-		return "reduce"
 	default:
 		return "unknown EdgeType"
 	}
@@ -203,45 +199,55 @@ const intervalMarker = "INTERVAL"
 // - Expressions -- optional list of expressions to also evaluate. Useful for time of day alerting.
 //
 // Example:
-//    var data = stream.from()...
+//    var data = stream
+//        |from()...
 //    // Trigger critical alert if the throughput drops below 100 points per 10s and checked every 10s.
-//    data.deadman(100.0, 10s)
+//    data
+//        |deadman(100.0, 10s)
 //    //Do normal processing of data
-//    data....
+//    data...
 //
 // The above is equivalent to this
 // Example:
-//    var data = stream.from()...
+//    var data = stream
+//        |from()...
 //    // Trigger critical alert if the throughput drops below 100 points per 10s and checked every 10s.
-//    data.stats(10s)
-//          .derivative('collected')
-//              .unit(10s)
-//              .nonNegative()
-//          .alert()
-//              .id('node \'stream0\' in task \'{{ .TaskName }}\'')
-//              .message('{{ .ID }} is {{ if eq .Level "OK" }}alive{{ else }}dead{{ end }}: {{ index .Fields "collected" | printf "%0.3f" }} points/10s.')
-//              .crit(lamdba: "collected" <= 100.0)
+//    data
+//        |stats(10s)
+//        |derivative('collected')
+//            .unit(10s)
+//            .nonNegative()
+//        |alert()
+//            .id('node \'stream0\' in task \'{{ .TaskName }}\'')
+//            .message('{{ .ID }} is {{ if eq .Level "OK" }}alive{{ else }}dead{{ end }}: {{ index .Fields "collected" | printf "%0.3f" }} points/10s.')
+//            .crit(lamdba: "collected" <= 100.0)
 //    //Do normal processing of data
-//    data....
+//    data...
 //
 // The `id` and `message` alert properties can be configured globally via the 'deadman' configuration section.
 //
 // Since the AlertNode is the last piece it can be further modified as normal.
 // Example:
-//    var data = stream.from()...
+//    var data = stream
+//        |from()...
 //    // Trigger critical alert if the throughput drops below 100 points per 1s and checked every 10s.
-//    data.deadman(100.0, 10s).slack().channel('#dead_tasks')
+//    data
+//        |deadman(100.0, 10s)
+//            .slack()
+//            .channel('#dead_tasks')
 //    //Do normal processing of data
-//    data....
+//    data...
 //
 // You can specify additional lambda expressions to further constrain when the deadman's switch is triggered.
 // Example:
-//    var data = stream.from()...
+//    var data = stream
+//        |from()...
 //    // Trigger critical alert if the throughput drops below 100 points per 10s and checked every 10s.
 //    // Only trigger the alert if the time of day is between 8am-5pm.
-//    data.deadman(100.0, 10s, lambda: hour("time") >= 8 AND hour("time") <= 17)
+//    data
+//        |deadman(100.0, 10s, lambda: hour("time") >= 8 AND hour("time") <= 17)
 //    //Do normal processing of data
-//    data....
+//    data...
 //
 func (n *node) Deadman(threshold float64, interval time.Duration, expr ...tick.Node) *AlertNode {
 	dn := n.Stats(interval).
@@ -351,34 +357,12 @@ func (n *chainnode) Eval(expressions ...tick.Node) *EvalNode {
 //
 // Can pass literal * to group by all dimensions.
 // Example:
-//    .groupBy(*)
+//    |groupBy(*)
 //
 func (n *chainnode) GroupBy(tag ...interface{}) *GroupByNode {
 	g := newGroupByNode(n.provides, tag)
 	n.linkChild(g)
 	return g
-}
-
-// > *DEPRECATION WARNING*: As of v0.11 you can use the new InfluxQLNode to perform map reduce functions.
-// This way of performing influxql functions will be removed in the 0.12 release.
-//
-// Perform a map-reduce operation on the data.
-// The built-in functions under `influxql` provide the
-// selection,aggregation, and transformation functions
-// from the InfluxQL language.
-//
-// MapReduce may be applied to either a batch or a stream edge.
-// In the case of a batch each batch is passed to the mapper independently.
-// In the case of a stream all incoming data points that have
-// the exact same time are combined into a batch and sent to the mapper.
-func (n *chainnode) MapReduce(mr MapReduceInfo) *ReduceNode {
-	var m *MapNode
-	var r *ReduceNode
-	m = newMapNode(n.Provides(), mr.Map)
-	r = newReduceNode(mr.Reduce, mr.Edge)
-	n.linkChild(m)
-	m.linkChild(r)
-	return r
 }
 
 // Create a new node that windows the stream by time.

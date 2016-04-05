@@ -11,7 +11,7 @@ import (
 //
 // Example:
 //    stream
-//        .eval(lambda: "error_count" / "total_count")
+//        |eval(lambda: "error_count" / "total_count")
 //          .as('error_percent')
 //
 // The above example will add a new field `error_percent` to each
@@ -23,18 +23,21 @@ type EvalNode struct {
 
 	// The name of the field that results from applying the expression.
 	// tick:ignore
-	AsList []string
+	AsList []string `tick:"As"`
 
 	// tick:ignore
 	Expressions []tick.Node
 
 	// tick:ignore
-	KeepFlag bool
+	KeepFlag bool `tick:"Keep"`
 	// List of fields to keep
 	// if empty and KeepFlag is true
 	// keep all fields.
 	// tick:ignore
 	KeepList []string
+
+	// tick:ignore
+	QuiteFlag bool `tick:"Quiet"`
 }
 
 func newEvalNode(e EdgeType, exprs []tick.Node) *EvalNode {
@@ -52,7 +55,7 @@ func newEvalNode(e EdgeType, exprs []tick.Node) *EvalNode {
 //
 // Example:
 //    stream
-//        .eval(lambda: "value" * "value", lambda: 1.0 / "value2")
+//        |eval(lambda: "value" * "value", lambda: 1.0 / "value2")
 //            .as('value2', 'inv_value2')
 //
 // The above example calculates two fields from the value and names them
@@ -75,9 +78,9 @@ func (e *EvalNode) As(names ...string) *EvalNode {
 //
 // Example:
 //    stream
-//        .eval(lambda: "value" * "value", lambda: 1.0 / "value2")
+//        |eval(lambda: "value" * "value", lambda: 1.0 / "value2")
 //            .as('value2', 'inv_value2')
-//        .keep('value', 'inv_value2')
+//            .keep('value', 'inv_value2')
 //
 // In the above example the original field `value` is preserved.
 // In addition the new field `value2` is calculated and used in evaluating
@@ -87,5 +90,12 @@ func (e *EvalNode) As(names ...string) *EvalNode {
 func (e *EvalNode) Keep(fields ...string) *EvalNode {
 	e.KeepFlag = true
 	e.KeepList = fields
+	return e
+}
+
+// Suppress errors during evaluation.
+// tick:property
+func (e *EvalNode) Quiet() *EvalNode {
+	e.QuiteFlag = true
 	return e
 }

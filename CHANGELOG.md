@@ -1,6 +1,63 @@
 # Changelog
 
-## v0.11.0 [unreleased]
+## v0.13.0 [unreleased]
+
+### Release Notes
+
+### Features
+
+### Bugfixes
+
+## v0.12.0 [2016-04-04]
+
+### Release Notes
+
+New TICKscript syntax that uses a different operators for chaining methods vs property methods vs UDF methods.
+
+* A chaining method is a method that creates a new node in the pipeline. Uses the `|` operator.
+* A property method is a method that changes a property on a node. Uses the `.` operator.
+* A UDF method is a method that calls out to a UDF. Uses the `@` operator.
+
+For example below the `from`, `mean`, and `alert` methods create new nodes,
+the `detectAnomalies` method calls a UDF,
+and the other methods modify the nodes as property methods.
+
+```javascript
+stream
+    |from()
+        .measurement('cpu')
+        .where(lambda: "cpu" == 'cpu-total')
+    |mean('usage_idle')
+        .as('value')
+    @detectAnomalies()
+        .field('mean')
+    |alert()
+        .crit(lambda: "anomaly_score" > 10)
+        .log('/tmp/cpu.log')
+```
+
+With this change a new binary is provided with Kapacitor `tickfmt` which will
+format a TICKscript file according to a common standard.
+
+
+### Features
+
+- [#299](https://github.com/influxdata/kapacitor/issues/299): Changes TICKscript chaining method operators and adds `tickfmt` binary.
+- [#389](https://github.com/influxdata/kapacitor/pull/389): Adds benchmarks to Kapacitor for basic use cases.
+- [#390](https://github.com/influxdata/kapacitor/issues/390): BREAKING: Remove old `.mapReduce` functions.
+- [#381](https://github.com/influxdata/kapacitor/pull/381): Adding enable/disable/delete/reload tasks by glob.
+- [#401](https://github.com/influxdata/kapacitor/issues/401): Add `.align()` property to BatchNode so you can align query start and stop times.
+
+### Bugfixes
+
+- [#378](https://github.com/influxdata/kapacitor/issues/378): Fix issue where derivative would divide by zero.
+- [#387](https://github.com/influxdata/kapacitor/issues/387): Add `.quiet()` option to EvalNode so errors can be suppressed if expected.
+- [#400](https://github.com/influxdata/kapacitor/issues/400): All query/connection errors are counted and reported in BatchNode stats.
+- [#412](https://github.com/influxdata/kapacitor/pull/412): Fix issues with batch queries dropping points because of nil fields.
+- [#413](https://github.com/influxdata/kapacitor/pull/413): Allow disambiguation between ".groupBy" and "|groupBy".
+
+
+## v0.11.0 [2016-03-22]
 
 ### Release Notes
 

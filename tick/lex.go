@@ -19,6 +19,8 @@ const (
 	TokenVar
 	TokenAsgn
 	TokenDot
+	TokenPipe
+	TokenAt
 	TokenIdent
 	TokenReference
 	TokenLambda
@@ -32,6 +34,7 @@ const (
 	TokenTrue
 	TokenFalse
 	TokenRegex
+	TokenComment
 
 	// begin operator tokens
 	begin_tok_operator
@@ -90,13 +93,22 @@ var operatorStr = [...]string{
 
 var strToOperator map[string]tokenType
 
+const (
+	KW_And    = "AND"
+	KW_Or     = "OR"
+	KW_True   = "TRUE"
+	KW_False  = "FALSE"
+	KW_Var    = "var"
+	KW_Lambda = "lambda"
+)
+
 var keywords = map[string]tokenType{
-	"AND":    TokenAnd,
-	"OR":     TokenOr,
-	"TRUE":   TokenTrue,
-	"FALSE":  TokenFalse,
-	"var":    TokenVar,
-	"lambda": TokenLambda,
+	KW_And:    TokenAnd,
+	KW_Or:     TokenOr,
+	KW_True:   TokenTrue,
+	KW_False:  TokenFalse,
+	KW_Var:    TokenVar,
+	KW_Lambda: TokenLambda,
 }
 
 func init() {
@@ -127,8 +139,14 @@ func (t tokenType) String() string {
 		return "string"
 	case t == TokenRegex:
 		return "regex"
+	case t == TokenComment:
+		return "//"
 	case t == TokenDot:
 		return "."
+	case t == TokenPipe:
+		return "|"
+	case t == TokenAt:
+		return "@"
 	case t == TokenAsgn:
 		return "="
 	case t == TokenLParen:
@@ -143,20 +161,23 @@ func (t tokenType) String() string {
 		return "TRUE"
 	case t == TokenFalse:
 		return "FALSE"
-	case isOperator(t):
+	case isExprOperator(t):
 		return operatorStr[t]
 	}
 	return fmt.Sprintf("%d", t)
 }
 
-func isOperator(typ tokenType) bool {
+// True if token type is an operator used in mathematical or boolean expressions.
+func isExprOperator(typ tokenType) bool {
 	return typ > begin_tok_operator && typ < end_tok_operator
 }
 
+// True if token type is an operator used in mathematical expressions.
 func isMathOperator(typ tokenType) bool {
 	return typ > begin_tok_operator_math && typ < end_tok_operator_math
 }
 
+// True if token type is an operator used in comparisions.
 func isCompOperator(typ tokenType) bool {
 	return typ > begin_tok_operator_comp && typ < end_tok_operator_comp
 }
@@ -304,6 +325,12 @@ func lexToken(l *lexer) stateFn {
 			return lexToken
 		case r == '.':
 			l.emit(TokenDot)
+			return lexToken
+		case r == '|':
+			l.emit(TokenPipe)
+			return lexToken
+		case r == '@':
+			l.emit(TokenAt)
 			return lexToken
 		case r == ',':
 			l.emit(TokenComma)
@@ -533,7 +560,7 @@ func lexComment(l *lexer) stateFn {
 	for {
 		switch r := l.next(); {
 		case r == '\n' || r == eof:
-			l.ignore()
+			l.emit(TokenComment)
 			return lexToken
 		}
 	}

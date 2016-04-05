@@ -28,25 +28,26 @@ kapacitord config
 # Getting Started
 
 This README gives you a high level overview of what Kapacitor is and what its like to use it. As well as some details of how it works.
-To get started using Kapacitor see [this guide](https://docs.influxdata.com/kapacitor/v0.10/introduction/getting_started/).
+To get started using Kapacitor see [this guide](https://docs.influxdata.com/kapacitor/latest/introduction/getting_started/).
 
 # Basic Example
 
-Kapacitor use a DSL named [TICKscript](https://docs.influxdata.com/kapacitor/v0.10/tick/) to define tasks.
+Kapacitor use a DSL named [TICKscript](https://docs.influxdata.com/kapacitor/latest/tick/) to define tasks.
 
 A simple TICKscript that alerts on high cpu usage looks like this:
 
 ```javascript
 stream
-    .from().measurement('cpu_usage_idle')
-    .groupBy('host')
-    .window()
+    |from()
+        .measurement('cpu_usage_idle')
+        .groupBy('host')
+    |window()
         .period(1m)
         .every(1m)
-    .mean('value')
-    .eval(lambda: 100.0 - "mean")
+    |mean('value')
+    |eval(lambda: 100.0 - "mean")
         .as('used')
-    .alert()
+    |alert()
         .message('{{ .Level}}: {{ .Name }}/{{ index .Tags "host" }} has high cpu usage: {{ index .Fields "used" }}')
         .warn(lambda: "used" > 70.0)
         .crit(lambda: "used" > 85.0)
@@ -63,7 +64,6 @@ stream
 
         // PagerDuty
         .pagerDuty()
-
 ```
 
 Place the above script into a file `cpu_alert.tick` then run these commands to start the task:
@@ -79,4 +79,4 @@ kapacitor define \
 kapacitor enable cpu_alert
 ```
 
-For more complete examples see the [documentation](https://docs.influxdata.com/kapacitor/v0.10/examples/)
+For more complete examples see the [documentation](https://docs.influxdata.com/kapacitor/latest/examples/)

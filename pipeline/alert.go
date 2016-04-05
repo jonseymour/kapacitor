@@ -1,8 +1,6 @@
 package pipeline
 
-import (
-	"github.com/influxdata/kapacitor/tick"
-)
+import "github.com/influxdata/kapacitor/tick"
 
 // Number of previous states to remember when computing flapping percentage.
 const defaultFlapHistory = 21
@@ -16,9 +14,12 @@ const defaultMessageTmpl = "{{ .ID }} is {{ .Level }}"
 // Default template for constructing a details message.
 const defaultDetailsTmpl = "{{ json . }}"
 
+// Default log mode for file
+const defaultLogFileMode = 0600
+
 // An AlertNode can trigger an event of varying severity levels,
 // and pass the event to alert handlers. The criteria for triggering
-// an alert is specified via a [lambda expression](/kapacitor/v0.11/tick/expr/).
+// an alert is specified via a [lambda expression](/kapacitor/latest/tick/expr/).
 // See AlertNode.Info, AlertNode.Warn, and AlertNode.Crit below.
 //
 // Different event handlers can be configured for each AlertNode.
@@ -60,16 +61,16 @@ const defaultDetailsTmpl = "{{ json . }}"
 //
 // Example:
 //   stream
-//        .groupBy('service')
-//        .alert()
-//            .id('kapacitor/{{ index .Tags "service" }}')
-//            .message('{{ .ID }} is {{ .Level }} value:{{ index .Fields "value" }}')
-//            .info(lambda: "value" > 10)
-//            .warn(lambda: "value" > 20)
-//            .crit(lambda: "value" > 30)
-//            .post("http://example.com/api/alert")
-//            .post("http://another.example.com/api/alert")
-//            .email().to('oncall@example.com')
+//           .groupBy('service')
+//       |alert()
+//           .id('kapacitor/{{ index .Tags "service" }}')
+//           .message('{{ .ID }} is {{ .Level }} value:{{ index .Fields "value" }}')
+//           .info(lambda: "value" > 10)
+//           .warn(lambda: "value" > 20)
+//           .crit(lambda: "value" > 30)
+//           .post("http://example.com/api/alert")
+//           .post("http://another.example.com/api/alert")
+//           .email().to('oncall@example.com')
 //
 //
 // It is assumed that each successive level filters a subset
@@ -93,26 +94,32 @@ type AlertNode struct {
 	//    * Tags -- Map of tags. Use '{{ index .Tags "key" }}' to get a specific tag value.
 	//
 	// Example:
-	//   stream.from().measurement('cpu')
-	//   .groupBy('cpu')
-	//   .alert()
-	//      .id('kapacitor/{{ .Name }}/{{ .Group }}')
+	//   stream
+	//       |from()
+	//           .measurement('cpu')
+	//           .groupBy('cpu')
+	//       |alert()
+	//           .id('kapacitor/{{ .Name }}/{{ .Group }}')
 	//
 	// ID: kapacitor/cpu/cpu=cpu0,
 	//
 	// Example:
-	//   stream...
-	//   .groupBy('service')
-	//   .alert()
-	//      .id('kapacitor/{{ index .Tags "service" }}')
+	//   stream
+	//       |from()
+	//           .measurement('cpu')
+	//           .groupBy('service')
+	//       |alert()
+	//           .id('kapacitor/{{ index .Tags "service" }}')
 	//
 	// ID: kapacitor/authentication
 	//
 	// Example:
-	//   stream...
-	//   .groupBy('service', 'host')
-	//   .alert()
-	//      .id('kapacitor/{{ index .Tags "service" }}/{{ index .Tags "host" }}')
+	//   stream
+	//       |from()
+	//           .measurement('cpu')
+	//           .groupBy('service', 'host')
+	//       |alert()
+	//           .id('kapacitor/{{ index .Tags "service" }}/{{ index .Tags "host" }}')
 	//
 	// ID: kapacitor/authentication/auth001.example.com
 	//
@@ -134,11 +141,13 @@ type AlertNode struct {
 	//    * Time -- The time of the point that triggered the event.
 	//
 	// Example:
-	//   stream...
-	//   .groupBy('service', 'host')
-	//   .alert()
-	//      .id('{{ index .Tags "service" }}/{{ index .Tags "host" }}')
-	//      .message('{{ .ID }} is {{ .Level}} value: {{ index .Fields "value" }}')
+	//   stream
+	//       |from()
+	//           .measurement('cpu')
+	//           .groupBy('service', 'host')
+	//       |alert()
+	//           .id('{{ index .Tags "service" }}/{{ index .Tags "host" }}')
+	//           .message('{{ .ID }} is {{ .Level}} value: {{ index .Fields "value" }}')
 	//
 	// Message: authentication/auth001.example.com is CRITICAL value:42
 	//
@@ -160,7 +169,7 @@ type AlertNode struct {
 	// JSON string.
 	//
 	// Example:
-	//    .alert()
+	//    |alert()
 	//       .id('{{ .Name }}')
 	//       .details('''
 	//<h1>{{ .ID }}</h1>
@@ -183,7 +192,7 @@ type AlertNode struct {
 	Crit tick.Node
 
 	//tick:ignore
-	UseFlapping bool
+	UseFlapping bool `tick:"Flapping"`
 	//tick:ignore
 	FlapLow float64
 	//tick:ignore
@@ -198,55 +207,55 @@ type AlertNode struct {
 
 	// Send alerts only on state changes.
 	// tick:ignore
-	IsStateChangesOnly bool
+	IsStateChangesOnly bool `tick:"StateChangesOnly"`
 
 	// Post the JSON alert data to the specified URL.
 	// tick:ignore
-	PostHandlers []*PostHandler
+	PostHandlers []*PostHandler `tick:"Post"`
 
 	// Email handlers
 	// tick:ignore
-	EmailHandlers []*EmailHandler
+	EmailHandlers []*EmailHandler `tick:"Email"`
 
 	// A commands to run when an alert triggers
 	// tick:ignore
-	ExecHandlers []*ExecHandler
+	ExecHandlers []*ExecHandler `tick:"Exec"`
 
 	// Log JSON alert data to file. One event per line.
 	// tick:ignore
-	LogHandlers []*LogHandler
+	LogHandlers []*LogHandler `tick:"Log"`
 
 	// Send alert to VictorOps.
 	// tick:ignore
-	VictorOpsHandlers []*VictorOpsHandler
+	VictorOpsHandlers []*VictorOpsHandler `tick:"VictorOps"`
 
 	// Send alert to PagerDuty.
 	// tick:ignore
-	PagerDutyHandlers []*PagerDutyHandler
+	PagerDutyHandlers []*PagerDutyHandler `tick:"PagerDuty"`
 
 	// Send alert to Sensu.
 	// tick:ignore
-	SensuHandlers []*SensuHandler
+	SensuHandlers []*SensuHandler `tick:"Sensu"`
 
 	// Send alert to Slack.
 	// tick:ignore
-	SlackHandlers []*SlackHandler
+	SlackHandlers []*SlackHandler `tick:"Slack"`
 
 	// Send alert to HipChat.
 	// tick:ignore
-	HipChatHandlers []*HipChatHandler
+	HipChatHandlers []*HipChatHandler `tick:"HipChat"`
 
 	// Send alert to Alerta.
 	// tick:ignore
-	AlertaHandlers []*AlertaHandler
+	AlertaHandlers []*AlertaHandler `tick:"Alerta"`
 
 	// Send alert to OpsGenie
 	// tick:ignore
-	OpsGenieHandlers []*OpsGenieHandler
+	OpsGenieHandlers []*OpsGenieHandler `tick:"OpsGenie"`
 
 	// Send alert to Talk.
 	// tick:ignore
-	TalkHandlers []*TalkHandler
+	TalkHandlers []*TalkHandler `tick:"Talk"`
 }
 
 func newAlertNode(wants EdgeType) *AlertNode {
@@ -268,14 +277,16 @@ func newAlertNode(wants EdgeType) *AlertNode {
 // are considered different states.
 //
 // Example:
-//    stream...
-//        .window()
-//             .period(10s)
-//             .every(10s)
-//        .alert()
-//            .crit(lambda: "value" > 10)
-//            .stateChangesOnly()
-//            .slack()
+//   stream
+//       |from()
+//           .measurement('cpu')
+//       |window()
+//            .period(10s)
+//            .every(10s)
+//       |alert()
+//           .crit(lambda: "value" > 10)
+//           .stateChangesOnly()
+//           .slack()
 //
 // If the "value" is greater than 10 for a total of 60s, then
 // only two events will be sent. First, when the value crosses
@@ -342,7 +353,7 @@ type PostHandler struct {
 // in the TICKscript.
 //
 // Example:
-//    .alert()
+//    |alert()
 //       .id('{{ .Name }}')
 //       // Email subject
 //       .meassage('{{ .ID }}:{{ .Level }}')
@@ -370,8 +381,8 @@ type PostHandler struct {
 //       state-changes-only =  true
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //
 // Send email to 'oncall@example.com' from 'kapacitor@example.com'
 //
@@ -418,11 +429,22 @@ type ExecHandler struct {
 // Log JSON alert data to file. One event per line.
 // Must specify the absolute path to the log file.
 // It will be created if it does not exist.
+// Example:
+//    stream
+//         |alert()
+//             .log('/tmp/alert')
+//
+// Example:
+//    stream
+//         |alert()
+//             .log('/tmp/alert')
+//             .mode(0644)
 // tick:property
 func (a *AlertNode) Log(filepath string) *LogHandler {
 	log := &LogHandler{
 		AlertNode: a,
 		FilePath:  filepath,
+		Mode:      defaultLogFileMode,
 	}
 	a.LogHandlers = append(a.LogHandlers, log)
 	return log
@@ -436,6 +458,9 @@ type LogHandler struct {
 	// It will be created if it does not exist.
 	// tick:ignore
 	FilePath string
+
+	// File's mode and permissions, default is 0600
+	Mode int64
 }
 
 // Send alert to VictorOps.
@@ -452,15 +477,15 @@ type LogHandler struct {
 // With the correct configuration you can now use VictorOps in TICKscripts.
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .victorOps()
 //
 // Send alerts to VictorOps using the routing key in the configuration file.
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .victorOps()
 //             .routingKey('team_rocket')
 //
@@ -478,8 +503,8 @@ type LogHandler struct {
 //      global = true
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //
 // Send alert to VictorOps using the default routing key, found in the configuration.
 // tick:property
@@ -520,8 +545,8 @@ type VictorOpsHandler struct {
 // With the correct configuration you can now use PagerDuty in TICKscripts.
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .pagerDuty()
 //
 // If the 'pagerduty' section in the configuration has the option: global = true
@@ -535,8 +560,8 @@ type VictorOpsHandler struct {
 //      global = true
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //
 // Send alert to PagerDuty.
 // tick:property
@@ -570,15 +595,15 @@ type PagerDutyHandler struct {
 // where the alert changed state are posted to the room.
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .hipChat()
 //
 // Send alerts to HipChat room in the configuration file.
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .hipChat()
 //             .room('Kapacitor')
 //
@@ -599,8 +624,8 @@ type PagerDutyHandler struct {
 //      state-changes-only = true
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //
 // Send alert to HipChat using default room 'Test Room'.
 // tick:property
@@ -642,8 +667,8 @@ type HipChatHandler struct {
 // Send alerts to Alerta. The resource and event properties are required.
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .alerta()
 //                 .resource('Hostname or service')
 //                 .event('Something went wrong')
@@ -651,8 +676,8 @@ type HipChatHandler struct {
 // Alerta also accepts optional alert information.
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .alerta()
 //                 .resource('Hostname or service')
 //                 .event('Something went wrong')
@@ -708,7 +733,7 @@ type AlertaHandler struct {
 
 	// List of effected Services
 	// tick:ignore
-	Service []string
+	Service []string `tick:"Services"`
 }
 
 // List of effected services.
@@ -727,8 +752,8 @@ func (a *AlertaHandler) Services(service ...string) *AlertaHandler {
 //      source = "Kapacitor"
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .sensu()
 //
 // Send alerts to Sensu client.
@@ -764,23 +789,23 @@ type SensuHandler struct {
 // where the alert changed state are posted to the channel.
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .slack()
 //
 // Send alerts to Slack channel in the configuration file.
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .slack()
 //             .channel('#alerts')
 //
 // Send alerts to Slack channel '#alerts'
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .slack()
 //             .channel('@jsmith')
 //
@@ -799,8 +824,8 @@ type SensuHandler struct {
 //      state-changes-only = true
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //
 // Send alert to Slack using default channel '#general'.
 // tick:property
@@ -836,15 +861,15 @@ type SlackHandler struct {
 // With the correct configuration you can now use OpsGenie in TICKscripts.
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .opsGenie()
 //
 // Send alerts to OpsGenie using the teams and recipients in the configuration file.
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .opsGenie()
 //             .teams('team_rocket','team_test')
 //
@@ -862,8 +887,8 @@ type SlackHandler struct {
 //      global = true
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //
 // Send alert to OpsGenie using the default recipients, found in the configuration.
 // tick:property
@@ -881,11 +906,11 @@ type OpsGenieHandler struct {
 
 	// OpsGenie Teams.
 	// tick:ignore
-	TeamsList []string
+	TeamsList []string `tick:"Teams"`
 
 	// OpsGenie Recipients.
 	// tick:ignore
-	RecipientsList []string
+	RecipientsList []string `tick:"Recipients"`
 }
 
 // The list of teams to be alerted. If empty defaults to the teams from the configuration.
@@ -920,8 +945,8 @@ func (og *OpsGenieHandler) Recipients(recipients ...string) *OpsGenieHandler {
 //      author_name = "Kapacitor"
 //
 // Example:
-//    stream...
-//         .alert()
+//    stream
+//         |alert()
 //             .talk()
 //
 // Send alerts to Talk client.
