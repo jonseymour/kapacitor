@@ -19,11 +19,7 @@
 		},
 		{
 			"ImportPath": "github.com/influxdata/influxdb",
-			"Rev": "stable-20160404a"
-		},
-		{
-			"ImportPath": "github.com/influxdb/influxdb",
-			"Rev": "v0.10.3"
+			"Rev": "origin/0.12"
 		},
 		{
 			"ImportPath": "github.com/pmezard/go-difflib/difflib",
